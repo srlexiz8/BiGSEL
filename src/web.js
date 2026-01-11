@@ -1,6 +1,6 @@
 /* @flow */
+// JSX desteği için en üste ekliyoruz
 import '@babel/register';
-import 'ignore-styles';
 
 import url from 'url';
 import path from 'path';
@@ -16,6 +16,7 @@ const __dirname = path.dirname(__filename);
 
 const PORT = process.env.PORT || 10000;
 
+// Çekirdek dosyalar
 import forceGC from './core/forceGC.js';
 const assets = require('./assets.json'); 
 import logger from './core/logger.js';
@@ -35,7 +36,7 @@ import {
   templateChunks,
 } from './routes/index.js';
 
-// Uzantıları kaldırdık, babel/register bunları halledecek
+// JSX dosyalarını uzantısız çağırıyoruz, Babel bunları bulup işleyecek
 import globeHtml from './components/Globe';
 import generateMainPage from './components/Main';
 
@@ -50,6 +51,7 @@ const app = express();
 app.disable('x-powered-by');
 const server = http.createServer(app);
 
+// WebSockets
 const usersocket = new SocketServer();
 const apisocket = new APISocketServer();
 server.on('upgrade', (request, socket, head) => {
