@@ -1,4 +1,6 @@
 /* @flow */
+import '@babel/register';
+import 'ignore-styles';
 
 import url from 'url';
 import path from 'path';
@@ -7,7 +9,6 @@ import express from 'express';
 import http from 'http';
 import etag from 'etag';
 
-// Node.js 20 Uyumluluk Katmanı
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const __filename = url.fileURLToPath(import.meta.url);
@@ -15,14 +16,11 @@ const __dirname = path.dirname(__filename);
 
 const PORT = process.env.PORT || 10000;
 
-// Çekirdek Dosyalar
 import forceGC from './core/forceGC.js';
 const assets = require('./assets.json'); 
 import logger from './core/logger.js';
 import rankings from './core/ranking.js';
 import factions from './core/factions.js';
-
-// Veritabanı Modelleri (Klasör yapısına göre tam yol)
 import models from './data/models/index.js'; 
 
 import SocketServer from './socket/SocketServer.js';
@@ -37,9 +35,9 @@ import {
   templateChunks,
 } from './routes/index.js';
 
-// GÖRSEL BİLEŞENLER: .jsx uzantısı hayati önem taşıyor
-import globeHtml from './components/Globe.jsx';
-import generateMainPage from './components/Main.jsx';
+// Uzantıları kaldırdık, babel/register bunları halledecek
+import globeHtml from './components/Globe';
+import generateMainPage from './components/Main';
 
 import { SECOND, MONTH } from './core/constants.js';
 import { DISCORD_INVITE } from './core/config.js';
@@ -50,11 +48,8 @@ startAllCanvasLoops();
 
 const app = express();
 app.disable('x-powered-by');
-
-// create http server
 const server = http.createServer(app);
 
-// WebSockets
 const usersocket = new SocketServer();
 const apisocket = new APISocketServer();
 server.on('upgrade', (request, socket, head) => {
@@ -71,11 +66,9 @@ server.on('upgrade', (request, socket, head) => {
 app.use('/api', api);
 app.use('/tiles', tiles);
 app.use(compression({ level: 3 }));
-
-// Statik Dosyalar (Public klasörü ana dizinde olmalı)
 app.use(express.static(path.join(__dirname, '../public'), { maxAge: 3 * MONTH, extensions: ['html'] }));
-
 app.use('/discord', (req, res) => res.redirect(DISCORD_INVITE));
+
 app.get('/chunks/templates/:c([0-9]+)/:x([0-9]+)/:y([0-9]+).bmp', templateChunks);
 app.get('/chunks/:c([0-9]+)/:x([0-9]+)/:y([0-9]+)(/)?:z([0-9]+)?.bmp', chunks);
 app.use('/admintools', admintools);
@@ -95,10 +88,9 @@ app.get(['/', '/invite/*', '/error'], (req, res) => {
   res.status(200).send(generateMainPage(countryCoords));
 });
 
-// Başlatma
 models.associate();
 models.sync().then(() => {
   server.listen(PORT, () => {
-    console.log(`✅ Bigsel aktif: Port ${PORT}`);
+    console.log(`🚀 Bigsel is LIVE at port ${PORT}`);
   });
-}).catch(err => console.error("DB Hatası:", err));
+}).catch(err => console.error("DB Error:", err));
