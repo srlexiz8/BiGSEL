@@ -23,8 +23,7 @@ import logger from './core/logger.js';
 import rankings from './core/ranking.js';
 import factions from './core/factions.js';
 
-// MODELS KLASÖRÜ DÜZELTMESİ:
-// Klasör olduğu için içindeki index.js dosyasını hedefliyoruz
+// KESİN ÇÖZÜM: Klasörün içindeki index.js dosyasını tam uzantısıyla çağırıyoruz
 import models from './data/models/index.js'; 
 
 import SocketServer from './socket/SocketServer.js';
