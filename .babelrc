@@ -1,13 +1,6 @@
 {
   "presets": [
-    [
-      "@babel/preset-env",
-      {
-        "targets": {
-          "node": "current"
-        }
-      }
-    ],
+    ["@babel/preset-env", { "targets": { "node": "current" } }],
     "@babel/preset-typescript",
     "@babel/preset-react",
     "@babel/preset-flow"
@@ -16,10 +9,6 @@
     "@babel/plugin-transform-flow-strip-types",
     ["@babel/plugin-proposal-decorators", { "legacy": true }],
     ["@babel/plugin-proposal-class-properties", { "loose": true }],
-    "@babel/plugin-proposal-function-sent",
-    "@babel/plugin-proposal-export-namespace-from",
-    "@babel/plugin-proposal-numeric-separator",
-    "@babel/plugin-proposal-throw-expressions",
     "@babel/plugin-transform-object-rest-spread"
   ]
 }
