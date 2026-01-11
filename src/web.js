@@ -1,49 +1,61 @@
-/* @flow */
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 
+// 1. BABEL'İ EN ÖNCE ÇALIŞTIRMAK İÇİN REQUIRE KULLANIYORUZ
 require('@babel/register')({
   extensions: ['.js', '.jsx', '.ts', '.tsx'],
-  presets: ['@babel/preset-env', '@babel/preset-react', '@babel/preset-flow', '@babel/preset-typescript'],
+  presets: [
+    ['@babel/preset-env', { targets: { node: 'current' } }],
+    '@babel/preset-react',
+    '@babel/preset-flow',
+    '@babel/preset-typescript'
+  ],
   plugins: [
     '@babel/plugin-transform-flow-strip-types',
     ['@babel/plugin-proposal-decorators', { legacy: true }],
-    ['@babel/plugin-proposal-class-properties', { loose: true }]
+    ['@babel/plugin-transform-class-properties', { loose: true }],
+    '@babel/plugin-transform-object-rest-spread'
   ],
-  ignore: [/node_modules/]
+  ignore: [/node_modules/],
+  cache: false
 });
 require('ignore-styles');
 
-import url from 'url';
-import path from 'path';
-import compression from 'compression';
-import express from 'express';
-import http from 'http';
-import etag from 'etag';
+// 2. IMPORT ÇAKIŞMASINI ÖNLEMEK İÇİN DİĞER DOSYALARI DA REQUIRE İLE ÇEKİYORUZ
+const url = require('url');
+const path = require('path');
+const compression = require('compression');
+const express = require('express');
+const http = require('http');
+const etag = require('etag');
 
-const __filename = url.fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const PORT = process.env.PORT || 10000;
+// Proje Dosyaları
+const forceGC = require('./core/forceGC.js');
+const assets = require('./assets.json');
+const logger = require('./core/logger.js');
+const rankings = require('./core/ranking.js');
+const factions = require('./core/factions.js');
+const models = require('./data/models/index.js');
 
-import forceGC from './core/forceGC.js';
-const assets = require('./assets.json'); 
-import logger from './core/logger.js';
-import rankings from './core/ranking.js';
-import factions from './core/factions.js';
-import models from './data/models/index.js'; 
+const SocketServer = require('./socket/SocketServer.js').default || require('./socket/SocketServer.js');
+const APISocketServer = require('./socket/APISocketServer.js').default || require('./socket/APISocketServer.js');
 
-import SocketServer from './socket/SocketServer.js';
-import APISocketServer from './socket/APISocketServer.js';
+const routes = require('./routes/index.js');
+const { api, tiles, chunks, admintools, resetPassword, templateChunks } = routes;
 
-import { api, tiles, chunks, admintools, resetPassword, templateChunks } from './routes/index.js';
-
+// JSX Dosyaları
 const globeHtml = require('./components/Globe.jsx').default || require('./components/Globe.jsx');
 const generateMainPage = require('./components/Main.jsx').default || require('./components/Main.jsx');
 
-import { SECOND, MONTH } from './core/constants.js';
-import { DISCORD_INVITE } from './core/config.js';
-import { ccToCoords } from './utils/location.js';
-import { startAllCanvasLoops } from './core/tileserver.js';
+const { SECOND, MONTH } = require('./core/constants.js');
+const { DISCORD_INVITE } = require('./core/config.js');
+const { ccToCoords } = require('./utils/location.js');
+const { startAllCanvasLoops } = require('./core/tileserver.js');
+
+// --- SUNUCU BAŞLATMA ---
+const __filename = url.fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const PORT = process.env.PORT || 10000;
 
 startAllCanvasLoops();
 const app = express();
