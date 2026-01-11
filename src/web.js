@@ -7,12 +7,16 @@ import express from 'express';
 import http from 'http';
 import etag from 'etag';
 
+// Node.js 20'de JSON import hatasını çözmek için require desteği ekliyoruz
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+
 // Önemli: Render port ayarı
 const PORT = process.env.PORT || 10000;
 
-// import baseCss from './components/base.tcss';
+// Dosyaları içe aktarma
 import forceGC from './core/forceGC.js';
-import assets from './assets.json'; 
+const assets = require('./assets.json'); // JSON dosyası artık güvenli şekilde okunacak
 import logger from './core/logger.js';
 import rankings from './core/ranking.js';
 import factions from './core/factions.js';
@@ -186,7 +190,6 @@ promise.then(() => {
     rankings.updateRanking();
     factions.update();
     factions.updateBans();
-    const address = server.address();
-    logger.info('info', `Bigsel is running at http://localhost:${PORT}/`);
+    logger.info('info', `Bigsel is running at port ${PORT}`);
   });
 });
