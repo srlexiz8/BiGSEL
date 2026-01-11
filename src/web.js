@@ -13,16 +13,19 @@ const require = createRequire(import.meta.url);
 const __filename = url.fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Önemli: Render port ayarı
+// Port Ayarı
 const PORT = process.env.PORT || 10000;
 
-// Dosyaları içe aktarma (.js uzantıları zorunludur)
+// Dosyaları içe aktarma (Tam yollar ve .js uzantıları)
 import forceGC from './core/forceGC.js';
 const assets = require('./assets.json'); 
 import logger from './core/logger.js';
 import rankings from './core/ranking.js';
 import factions from './core/factions.js';
-import models from './data/models.js';
+
+// MODELS KLASÖRÜ DÜZELTMESİ:
+// Klasör olduğu için içindeki index.js dosyasını hedefliyoruz
+import models from './data/models/index.js'; 
 
 import SocketServer from './socket/SocketServer.js';
 import APISocketServer from './socket/APISocketServer.js';
@@ -35,6 +38,7 @@ import {
   resetPassword,
   templateChunks,
 } from './routes/index.js';
+
 import globeHtml from './components/Globe.js';
 import generateMainPage from './components/Main.js';
 
