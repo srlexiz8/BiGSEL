@@ -7,16 +7,19 @@ import express from 'express';
 import http from 'http';
 import etag from 'etag';
 
-// import baseCss from './components/base.tcss';
-import forceGC from './core/forceGC';
-import assets from './assets.json'; // eslint-disable-line import/no-unresolved
-import logger from './core/logger';
-import rankings from './core/ranking';
-import factions from './core/factions';
-import models from './data/models';
+// Önemli: Render port ayarı
+const PORT = process.env.PORT || 10000;
 
-import SocketServer from './socket/SocketServer';
-import APISocketServer from './socket/APISocketServer';
+// import baseCss from './components/base.tcss';
+import forceGC from './core/forceGC.js';
+import assets from './assets.json'; 
+import logger from './core/logger.js';
+import rankings from './core/ranking.js';
+import factions from './core/factions.js';
+import models from './data/models.js';
+
+import SocketServer from './socket/SocketServer.js';
+import APISocketServer from './socket/APISocketServer.js';
 
 import {
   api,
@@ -25,20 +28,23 @@ import {
   admintools,
   resetPassword,
   templateChunks,
-} from './routes';
-import globeHtml from './components/Globe';
-import generateMainPage from './components/Main';
+} from './routes/index.js';
+import globeHtml from './components/Globe.js';
+import generateMainPage from './components/Main.js';
 
-import { SECOND, MONTH } from './core/constants';
-import { PORT, DISCORD_INVITE } from './core/config';
+import { SECOND, MONTH } from './core/constants.js';
+import { DISCORD_INVITE } from './core/config.js';
 
-import { ccToCoords } from './utils/location';
-import { startAllCanvasLoops } from './core/tileserver';
+import { ccToCoords } from './utils/location.js';
+import { startAllCanvasLoops } from './core/tileserver.js';
 
 startAllCanvasLoops();
 
 const app = express();
 app.disable('x-powered-by');
+
+// ES Module için __dirname tanımlaması
+const __dirname = path.resolve();
 
 // Call Garbage Collector every 30 seconds
 setInterval(forceGC, 15 * 60 * SECOND);
@@ -78,11 +84,6 @@ app.use('/api', api);
 // -----------------------------------------------------------------------------
 app.use('/tiles', tiles);
 
-/*
- * use gzip compression for following calls
-/* level from -1 (default, 6) to 0 (no) from 1 (fastest) to 9 (best)
- * Set custon filter to make sure that .bmp files get compressed
- */
 app.use(
   compression({
     level: 3,
@@ -97,7 +98,6 @@ app.use(
 
 //
 // public folder
-// (this should be served with nginx or other webserver)
 // -----------------------------------------------------------------------------
 app.use(
   express.static(path.join(__dirname, 'public'), {
@@ -133,12 +133,12 @@ app.use('/admintools', admintools);
 app.use('/reset_password', resetPassword);
 
 //
-// 3D Globe (react generated)
+// 3D Globe
 // -----------------------------------------------------------------------------
 const globeEtag = etag(`${assets.globe.js}`, { weak: true });
 app.get('/globe', async (req, res) => {
   res.set({
-    'Cache-Control': `private, max-age=${15 * 60}`, // seconds
+    'Cache-Control': `private, max-age=${15 * 60}`,
     'Content-Type': 'text/html; charset=utf-8',
     ETag: globeEtag,
   });
@@ -152,7 +152,7 @@ app.get('/globe', async (req, res) => {
 });
 
 //
-// Main Page (react generated)
+// Main Page (Bigsel)
 // -----------------------------------------------------------------------------
 const indexEtag = etag(`${assets.vendor.js},${assets.client.js}`, {
   weak: true,
@@ -160,7 +160,7 @@ const indexEtag = etag(`${assets.vendor.js},${assets.client.js}`, {
 
 app.get(['/', '/invite/*', '/error'], async (req, res) => {
   res.set({
-    'Cache-Control': `private, max-age=${15 * 60}`, // seconds
+    'Cache-Control': `private, max-age=${15 * 60}`,
     'Content-Type': 'text/html; charset=utf-8',
     ETag: indexEtag,
   });
@@ -170,7 +170,6 @@ app.get(['/', '/invite/*', '/error'], async (req, res) => {
     return;
   }
 
-  // get start coordinates based on cloudflare header country
   const country = req.headers['cf-ipcountry'];
   const countryCoords = country ? ccToCoords(country) : [0, 0];
 
@@ -178,9 +177,8 @@ app.get(['/', '/invite/*', '/error'], async (req, res) => {
 });
 
 //
-// ip config
+// Database Sync & Start
 // -----------------------------------------------------------------------------
-
 models.associate();
 const promise = models.sync().catch((err) => logger.error(err.stack));
 promise.then(() => {
@@ -189,6 +187,6 @@ promise.then(() => {
     factions.update();
     factions.updateBans();
     const address = server.address();
-    logger.info('info', `web is running at http://localhost:${address.port}/`);
+    logger.info('info', `Bigsel is running at http://localhost:${PORT}/`);
   });
 });
