@@ -7,16 +7,18 @@ import express from 'express';
 import http from 'http';
 import etag from 'etag';
 
-// Node.js 20'de JSON import hatasını çözmek için require desteği ekliyoruz
+// Node.js 20 için JSON ve Dosya Yolu desteği
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
+const __filename = url.fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Önemli: Render port ayarı
 const PORT = process.env.PORT || 10000;
 
-// Dosyaları içe aktarma
+// Dosyaları içe aktarma (.js uzantıları zorunludur)
 import forceGC from './core/forceGC.js';
-const assets = require('./assets.json'); // JSON dosyası artık güvenli şekilde okunacak
+const assets = require('./assets.json'); 
 import logger from './core/logger.js';
 import rankings from './core/ranking.js';
 import factions from './core/factions.js';
@@ -46,9 +48,6 @@ startAllCanvasLoops();
 
 const app = express();
 app.disable('x-powered-by');
-
-// ES Module için __dirname tanımlaması
-const __dirname = path.resolve();
 
 // Call Garbage Collector every 30 seconds
 setInterval(forceGC, 15 * 60 * SECOND);
