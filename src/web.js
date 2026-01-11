@@ -2,10 +2,15 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 
-// Babel'i uzantılarla birlikte kaydediyoruz
 require('@babel/register')({
-  extensions: ['.js', '.jsx'],
-  presets: ['@babel/preset-env', '@babel/preset-react']
+  extensions: ['.js', '.jsx', '.ts', '.tsx'],
+  presets: ['@babel/preset-env', '@babel/preset-react', '@babel/preset-flow', '@babel/preset-typescript'],
+  plugins: [
+    '@babel/plugin-transform-flow-strip-types',
+    ['@babel/plugin-proposal-decorators', { legacy: true }],
+    ['@babel/plugin-proposal-class-properties', { loose: true }]
+  ],
+  ignore: [/node_modules/]
 });
 require('ignore-styles');
 
@@ -20,21 +25,18 @@ const __filename = url.fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PORT = process.env.PORT || 10000;
 
-// Çekirdek dosyalar (Uzantılı yollar)
 import forceGC from './core/forceGC.js';
 const assets = require('./assets.json'); 
 import logger from './core/logger.js';
 import rankings from './core/ranking.js';
 import factions from './core/factions.js';
-import models from './data/models/index.js'; //
+import models from './data/models/index.js'; 
 
 import SocketServer from './socket/SocketServer.js';
 import APISocketServer from './socket/APISocketServer.js';
 
 import { api, tiles, chunks, admintools, resetPassword, templateChunks } from './routes/index.js';
 
-// KESİN ÇÖZÜM: Node.js 20 import ile .jsx dosyasını doğrudan bulamaz. 
-// Bu yüzden Babel ile işlenmiş dosyaları 'require' ile çekiyoruz.
 const globeHtml = require('./components/Globe.jsx').default || require('./components/Globe.jsx');
 const generateMainPage = require('./components/Main.jsx').default || require('./components/Main.jsx');
 
@@ -44,17 +46,13 @@ import { ccToCoords } from './utils/location.js';
 import { startAllCanvasLoops } from './core/tileserver.js';
 
 startAllCanvasLoops();
-
 const app = express();
-app.disable('x-powered-by');
 const server = http.createServer(app);
 
-// Websocket Yükseltme
 server.on('upgrade', (request, socket, head) => {
   const { pathname } = url.parse(request.url);
   const usersocket = new SocketServer();
   const apisocket = new APISocketServer();
-  
   if (pathname === '/ws') {
     usersocket.wss.handleUpgrade(request, socket, head, (ws) => usersocket.wss.emit('connection', ws, request));
   } else if (pathname === '/mcws') {
