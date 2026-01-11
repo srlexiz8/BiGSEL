@@ -7,23 +7,22 @@ import express from 'express';
 import http from 'http';
 import etag from 'etag';
 
-// Node.js 20 için JSON ve Dosya Yolu desteği
+// Node.js 20 Uyumluluk Katmanı
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const __filename = url.fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Port Ayarı
 const PORT = process.env.PORT || 10000;
 
-// Dosyaları içe aktarma (Tam yollar ve .js uzantıları)
+// Çekirdek Dosyalar
 import forceGC from './core/forceGC.js';
 const assets = require('./assets.json'); 
 import logger from './core/logger.js';
 import rankings from './core/ranking.js';
 import factions from './core/factions.js';
 
-// KESİN ÇÖZÜM: Klasörün içindeki index.js dosyasını tam uzantısıyla çağırıyoruz
+// Veritabanı Modelleri (Klasör yapısına göre tam yol)
 import models from './data/models/index.js'; 
 
 import SocketServer from './socket/SocketServer.js';
@@ -38,12 +37,12 @@ import {
   templateChunks,
 } from './routes/index.js';
 
-import globeHtml from './components/Globe.js';
-import generateMainPage from './components/Main.js';
+// GÖRSEL BİLEŞENLER: .jsx uzantısı hayati önem taşıyor
+import globeHtml from './components/Globe.jsx';
+import generateMainPage from './components/Main.jsx';
 
 import { SECOND, MONTH } from './core/constants.js';
 import { DISCORD_INVITE } from './core/config.js';
-
 import { ccToCoords } from './utils/location.js';
 import { startAllCanvasLoops } from './core/tileserver.js';
 
@@ -52,146 +51,54 @@ startAllCanvasLoops();
 const app = express();
 app.disable('x-powered-by');
 
-// Call Garbage Collector every 30 seconds
-setInterval(forceGC, 15 * 60 * SECOND);
-
 // create http server
 const server = http.createServer(app);
 
-//
-// websockets
-// -----------------------------------------------------------------------------
+// WebSockets
 const usersocket = new SocketServer();
 const apisocket = new APISocketServer();
-function wsupgrade(request, socket, head) {
+server.on('upgrade', (request, socket, head) => {
   const { pathname } = url.parse(request.url);
-
   if (pathname === '/ws') {
-    usersocket.wss.handleUpgrade(request, socket, head, (ws) => {
-      usersocket.wss.emit('connection', ws, request);
-    });
+    usersocket.wss.handleUpgrade(request, socket, head, (ws) => usersocket.wss.emit('connection', ws, request));
   } else if (pathname === '/mcws') {
-    apisocket.wss.handleUpgrade(request, socket, head, (ws) => {
-      apisocket.wss.emit('connection', ws, request);
-    });
+    apisocket.wss.handleUpgrade(request, socket, head, (ws) => apisocket.wss.emit('connection', ws, request));
   } else {
     socket.destroy();
   }
-}
-server.on('upgrade', wsupgrade);
-
-//
-// API
-// -----------------------------------------------------------------------------
-app.use('/api', api);
-
-//
-// Serving Zoomed Tiless
-// -----------------------------------------------------------------------------
-app.use('/tiles', tiles);
-
-app.use(
-  compression({
-    level: 3,
-    filter: (req, res) => {
-      if (res.getHeader('Content-Type') === 'application/octet-stream') {
-        return true;
-      }
-      return compression.filter(req, res);
-    },
-  }),
-);
-
-//
-// public folder
-// -----------------------------------------------------------------------------
-app.use(
-  express.static(path.join(__dirname, 'public'), {
-    maxAge: 3 * MONTH,
-    extensions: ['html'],
-  }),
-);
-
-//
-// Redirecct to discord
-// -----------------------------------------------------------------------------
-app.use('/discord', (req, res) => {
-  res.redirect(DISCORD_INVITE);
 });
 
-//
-// Serving Chunks
-// -----------------------------------------------------------------------------
-app.get(
-  '/chunks/templates/:c([0-9]+)/:x([0-9]+)/:y([0-9]+).bmp',
-  templateChunks,
-);
+app.use('/api', api);
+app.use('/tiles', tiles);
+app.use(compression({ level: 3 }));
+
+// Statik Dosyalar (Public klasörü ana dizinde olmalı)
+app.use(express.static(path.join(__dirname, '../public'), { maxAge: 3 * MONTH, extensions: ['html'] }));
+
+app.use('/discord', (req, res) => res.redirect(DISCORD_INVITE));
+app.get('/chunks/templates/:c([0-9]+)/:x([0-9]+)/:y([0-9]+).bmp', templateChunks);
 app.get('/chunks/:c([0-9]+)/:x([0-9]+)/:y([0-9]+)(/)?:z([0-9]+)?.bmp', chunks);
-
-//
-// Admintools
-// -----------------------------------------------------------------------------
 app.use('/admintools', admintools);
-
-//
-// Password Reset Link
-// -----------------------------------------------------------------------------
 app.use('/reset_password', resetPassword);
 
-//
-// 3D Globe
-// -----------------------------------------------------------------------------
 const globeEtag = etag(`${assets.globe.js}`, { weak: true });
-app.get('/globe', async (req, res) => {
-  res.set({
-    'Cache-Control': `private, max-age=${15 * 60}`,
-    'Content-Type': 'text/html; charset=utf-8',
-    ETag: globeEtag,
-  });
-
-  if (req.headers['if-none-match'] === globeEtag) {
-    res.status(304).end();
-    return;
-  }
-
+app.get('/globe', (req, res) => {
+  res.set({ 'Content-Type': 'text/html; charset=utf-8', ETag: globeEtag });
   res.status(200).send(globeHtml);
 });
 
-//
-// Main Page (Bigsel)
-// -----------------------------------------------------------------------------
-const indexEtag = etag(`${assets.vendor.js},${assets.client.js}`, {
-  weak: true,
-});
-
-app.get(['/', '/invite/*', '/error'], async (req, res) => {
-  res.set({
-    'Cache-Control': `private, max-age=${15 * 60}`,
-    'Content-Type': 'text/html; charset=utf-8',
-    ETag: indexEtag,
-  });
-
-  if (req.headers['if-none-match'] === indexEtag) {
-    res.status(304).end();
-    return;
-  }
-
+const indexEtag = etag(`${assets.vendor.js},${assets.client.js}`, { weak: true });
+app.get(['/', '/invite/*', '/error'], (req, res) => {
+  res.set({ 'Content-Type': 'text/html; charset=utf-8', ETag: indexEtag });
   const country = req.headers['cf-ipcountry'];
   const countryCoords = country ? ccToCoords(country) : [0, 0];
-
   res.status(200).send(generateMainPage(countryCoords));
 });
 
-//
-// Database Sync & Start
-// -----------------------------------------------------------------------------
+// Başlatma
 models.associate();
-const promise = models.sync().catch((err) => logger.error(err.stack));
-promise.then(() => {
+models.sync().then(() => {
   server.listen(PORT, () => {
-    rankings.updateRanking();
-    factions.update();
-    factions.updateBans();
-    logger.info('info', `Bigsel is running at port ${PORT}`);
+    console.log(`✅ Bigsel aktif: Port ${PORT}`);
   });
-});
+}).catch(err => console.error("DB Hatası:", err));
